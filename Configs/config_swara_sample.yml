@@ -4,8 +4,8 @@ device: "cuda"
 epochs: 10
 batch_size: 8
 pretrained_model: ""
-train_data: "../Data/Sample_data/train_list.txt"
-val_data: "../Data/Sample_data/val_list.txt"
+train_data: "/kaggle/working/SwaraASR/Data/Sample_data/train_list.txt"
+val_data: "/kaggle/working/SwaraASR/Data/Sample_data/val_list.txt"
 
 preprocess_parasm:
   sr: 24000
