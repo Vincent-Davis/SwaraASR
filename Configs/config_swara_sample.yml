@@ -3,7 +3,7 @@ save_freq: 10
 device: "cuda"
 epochs: 10
 batch_size: 8
-pretrained_model: ""
+pretrained_model: "/kaggle/working/SwaraASR/model/epoch_00080.pth"
 train_data: "/kaggle/working/SwaraASR/Data/Sample_data/train_list.txt"
 val_data: "/kaggle/working/SwaraASR/Data/Sample_data/val_list.txt"
 
