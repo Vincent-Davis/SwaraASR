@@ -2,6 +2,8 @@ import csv
 import random
 import os
 
+random.seed(42)  # Tambahkan seed agar hasil shuffle konsisten
+
 # Path ke metadata.csv (di folder utama AuxiliaryASR)
 metadata_path = r'Data_swara/metadata_clean.csv'
 # Path ke folder Data untuk output
