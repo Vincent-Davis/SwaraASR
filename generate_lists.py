@@ -1,8 +1,6 @@
-import csv
-import random
+import pandas as pd
 import os
-
-random.seed(42)  # Tambahkan seed agar hasil shuffle konsisten
+from sklearn.model_selection import train_test_split
 
 # Path ke metadata.csv (di folder utama AuxiliaryASR)
 metadata_path = r'Data_swara/metadata_clean.csv'
@@ -11,32 +9,51 @@ data_folder = 'New_data'
 path = r'/kaggle/working/audio/res/'
 os.makedirs(data_folder, exist_ok=True)  # Pastikan folder Data ada
 
-# Baca metadata.csv
-data = []
-with open(metadata_path, 'r', encoding='utf-8') as f:
-    reader = csv.reader(f)
-    next(reader)  # Skip header
-    for row in reader:
-        # row[3] = filename, row[2] = text, row[5] = encoded_speaker
-        data.append((row[3], row[2], row[5]))
+# Baca metadata.csv menggunakan pandas
+df = pd.read_csv(metadata_path)
 
-# Shuffle data untuk split acak
-random.shuffle(data)
+# Ambil kolom yang diperlukan: filename, text, encoded_speaker
+data = df[['filename', 'text', 'encoded_speaker']]
 
-# Split 80% train, 20% val
-split_index = int(0.8 * len(data))
-train_data = data[:split_index]
-val_data = data[split_index:]
+# Proporsi: 80% train, 10% val, 10% test
+# Pertama, split menjadi train (80%) dan temp (20%)
+train_data, temp_data = train_test_split(
+    data, 
+    test_size=0.2,  # 20% untuk val + test
+    random_state=42
+)
+
+# Kedua, split temp menjadi val (50% dari temp, yaitu 10% total) dan test (50% dari temp, yaitu 10% total)
+val_data, test_data = train_test_split(
+    temp_data, 
+    test_size=0.5,  # 50% dari temp untuk test
+    random_state=42
+)
 
 # Tulis train_list.txt
 with open(os.path.join(data_folder, 'train_list.txt'), 'w', encoding='utf-8') as f:
-    for filename, text, speaker in train_data:
+    for _, row in train_data.iterrows():
+        filename = row['filename']
+        text = row['text']
+        speaker = row['encoded_speaker']
         f.write(f"{os.path.join(path, filename)}|{text}|{speaker}\n")
 
 # Tulis val_list.txt
 with open(os.path.join(data_folder, 'val_list.txt'), 'w', encoding='utf-8') as f:
-    for filename, text, speaker in val_data:
+    for _, row in val_data.iterrows():
+        filename = row['filename']
+        text = row['text']
+        speaker = row['encoded_speaker']
+        f.write(f"{os.path.join(path, filename)}|{text}|{speaker}\n")
+
+# Tulis test_list.txt
+with open(os.path.join(data_folder, 'test_list.txt'), 'w', encoding='utf-8') as f:
+    for _, row in test_data.iterrows():
+        filename = row['filename']
+        text = row['text']
+        speaker = row['encoded_speaker']
         f.write(f"{os.path.join(path, filename)}|{text}|{speaker}\n")
 
 print(f"Train list created with {len(train_data)} entries.")
 print(f"Val list created with {len(val_data)} entries.")
+print(f"Test list created with {len(test_data)} entries.")
