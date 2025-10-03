@@ -80,7 +80,13 @@ class MelDataset(torch.utils.data.Dataset):
 
     def _load_tensor(self, data):
         wave_path, text, speaker_id = data
-        speaker_id = int(speaker_id)
+        try:
+            speaker_id = int(speaker_id)
+        except ValueError:
+            print(f"Invalid speaker_id '{speaker_id}' in data: {data}. Setting to 0.")
+            raise ValueError(f"Invalid speaker_id '{speaker_id}'")
+            speaker_id = 0  # Default jika kosong atau invalid
+        # speaker_id = int(speaker_id)
         wave, sr = sf.read(wave_path)
 
         # phonemize the text
