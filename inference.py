@@ -89,19 +89,20 @@ def main(config_path, data_path, output_path, pretrained_model):
             
             # Decode ke text
             for i, pred_seq in enumerate(preds):
-                # Predicted phoneme text
-                pred_text = ''.join([reverse_vocab.get(p, '') for p in pred_seq])
-                
-                # Ground truth phoneme text (dari texts, tanpa blank di awal/akhir)
+                # Predicted phoneme sequence (sudah list index)
+                # Ground truth phoneme sequence (sudah list index)
                 gt_seq = texts[i][:input_lengths[i]].tolist()
-                gt_text = ''.join([reverse_vocab.get(g, '') for g in gt_seq if g != blank_index])
                 
-                # Hitung WER
-                wer = calc_wer(gt_text, pred_text)
+                # Hitung WER dari index, seperti training
+                wer = calc_wer(gt_seq, pred_seq, ignore_indexes=[blank_index])  # Tambah ignore_indexes
+                
                 total_wer += wer
                 total_samples += 1
                 
-                # Simpan hasil (filename tidak tersedia di batch, gunakan index atau skip)
+                # Untuk logging, decode ke string jika perlu
+                pred_text = ''.join([reverse_vocab.get(p, '') for p in pred_seq])
+                gt_text = ''.join([reverse_vocab.get(g, '') for g in gt_seq if g != blank_index])
+                
                 results.append({
                     'sample_id': total_samples - 1,
                     'ground_truth': gt_text,
