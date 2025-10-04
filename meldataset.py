@@ -97,7 +97,7 @@ class MelDataset(torch.utils.data.Dataset):
         # phonemize the text
         ps = self.g2p.phonemize(text.replace('-', ' '))
         if "'" in ps:
-            ps.remove("'")
+            ps = ps.replace("'", "")  # Ganti ke replace untuk string
         text = self.text_cleaner(ps)
         blank_index = self.text_cleaner.word_index_dictionary[" "]
         text.insert(0, blank_index) # add a blank at the beginning (silence)
