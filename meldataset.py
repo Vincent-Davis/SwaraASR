@@ -14,7 +14,8 @@ import torch.nn.functional as F
 import torchaudio
 from torch.utils.data import DataLoader
 
-from g2p_en import G2p
+# from g2p_en import G2p
+from phonemizer import EnIndPhonemizer
 
 import logging
 logger = logging.getLogger(__name__)
@@ -45,7 +46,8 @@ class MelDataset(torch.utils.data.Dataset):
         spect_params = SPECT_PARAMS
         mel_params = MEL_PARAMS
 
-        _data_list = [l[:-1].split('|') for l in data_list]
+        # _data_list = [l[:-1].split('|') for l in data_list]
+        _data_list = [l.split('|') for l in data_list] 
         self.data_list = [data if len(data) == 3 else (*data, 0) for data in _data_list]
         self.text_cleaner = TextCleaner(dict_path)
         self.sr = sr
@@ -53,38 +55,49 @@ class MelDataset(torch.utils.data.Dataset):
         self.to_melspec = torchaudio.transforms.MelSpectrogram(**MEL_PARAMS)
         self.mean, self.std = -4, 4
         
-        self.g2p = G2p()
+        # self.g2p = G2p()
+        self.g2p = EnIndPhonemizer(ipa=True, keep_stress=True)
 
     def __len__(self):
         return len(self.data_list)
 
     def __getitem__(self, idx):
-        data = self.data_list[idx]
-        wave, text_tensor, speaker_id = self._load_tensor(data)
-        wave_tensor = torch.from_numpy(wave).float()
-        mel_tensor = self.to_melspec(wave_tensor)
+        try:
+            data = self.data_list[idx]
+            wave, text_tensor, speaker_id = self._load_tensor(data)
+            wave_tensor = torch.from_numpy(wave).float()
+            mel_tensor = self.to_melspec(wave_tensor)
 
-        if (text_tensor.size(0)+1) >= (mel_tensor.size(1) // 3):
-            mel_tensor = F.interpolate(
-                mel_tensor.unsqueeze(0), size=(text_tensor.size(0)+1)*3, align_corners=False,
-                mode='linear').squeeze(0)
+            if (text_tensor.size(0)+1) >= (mel_tensor.size(1) // 3):
+                mel_tensor = F.interpolate(
+                    mel_tensor.unsqueeze(0), size=(text_tensor.size(0)+1)*3, align_corners=False,
+                    mode='linear').squeeze(0)
 
-        acoustic_feature = (torch.log(1e-5 + mel_tensor) - self.mean)/self.std
+            acoustic_feature = (torch.log(1e-5 + mel_tensor) - self.mean)/self.std
 
-        length_feature = acoustic_feature.size(1)
-        acoustic_feature = acoustic_feature[:, :(length_feature - length_feature % 2)]
+            length_feature = acoustic_feature.size(1)
+            acoustic_feature = acoustic_feature[:, :(length_feature - length_feature % 2)]
 
-        return wave_tensor, acoustic_feature, text_tensor, data[0]
+            return wave_tensor, acoustic_feature, text_tensor, data[0]
+        except Exception as e:
+            print(f"Skipping sample {idx}: {e}")
+            raise  # Atau return dummy jika ingin skip
 
     def _load_tensor(self, data):
         wave_path, text, speaker_id = data
-        speaker_id = int(speaker_id)
+        try:
+            speaker_id = int(speaker_id)
+        except ValueError:
+            print(f"Invalid speaker_id '{speaker_id}' in data: {data}. Setting to 0.")
+            raise ValueError(f"Invalid speaker_id '{speaker_id}'")
+            speaker_id = 0  # Default jika kosong atau invalid
+        # speaker_id = int(speaker_id)
         wave, sr = sf.read(wave_path)
 
         # phonemize the text
-        ps = self.g2p(text.replace('-', ' '))
+        ps = self.g2p.phonemize(text.replace('-', ' '))
         if "'" in ps:
-            ps.remove("'")
+            ps = ps.replace("'", "")  # Ganti ke replace untuk string
         text = self.text_cleaner(ps)
         blank_index = self.text_cleaner.word_index_dictionary[" "]
         text.insert(0, blank_index) # add a blank at the beginning (silence)
